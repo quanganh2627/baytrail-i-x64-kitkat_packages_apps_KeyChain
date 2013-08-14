@@ -33,6 +33,9 @@ import android.security.IKeyChainService;
 import android.security.KeyChain;
 import android.security.KeyStore;
 import android.util.Log;
+
+import com.intel.arkham.ParentKeyChain;
+
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.security.cert.CertificateException;
@@ -81,8 +84,9 @@ public class KeyChainService extends IntentService {
 
     private final IKeyChainService.Stub mIKeyChainService = new IKeyChainService.Stub() {
         private final KeyStore mKeyStore = KeyStore.getInstance();
-        private final TrustedCertificateStore mTrustedCertificateStore
-                = new TrustedCertificateStore();
+        // ARKHAM-624: Get user specific CA store
+        private final TrustedCertificateStore mTrustedCertificateStore = ParentKeyChain
+                .getTrustedCertificateStore();
 
         @Override
         public String requestPrivateKey(String alias) {
