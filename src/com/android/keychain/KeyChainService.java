@@ -28,12 +28,15 @@ import android.database.sqlite.SQLiteOpenHelper;
 import android.os.Binder;
 import android.os.IBinder;
 import android.os.Process;
+import android.os.UserHandle;
+
 import android.security.Credentials;
 import android.security.IKeyChainService;
 import android.security.KeyChain;
 import android.security.KeyStore;
 import android.util.Log;
 
+import com.intel.arkham.ContainerCommons;
 import com.intel.arkham.ParentKeyChain;
 
 import java.io.ByteArrayInputStream;
@@ -99,7 +102,14 @@ public class KeyChainService extends IntentService {
             }
 
             final StringBuilder sb = new StringBuilder();
-            sb.append(Process.SYSTEM_UID);
+            // ARKHAM-1087: Fix the hardcoded name for container keys
+            if (ContainerCommons.isContainer(UserHandle.getCallingUserId())) {
+                sb.append(UserHandle.getUid(UserHandle.getCallingUserId(),
+                        UserHandle.getAppId(Process.SYSTEM_UID)));
+            }
+            else {
+                sb.append(Process.SYSTEM_UID);
+            }
             sb.append('_');
             sb.append(keystoreAlias);
 
