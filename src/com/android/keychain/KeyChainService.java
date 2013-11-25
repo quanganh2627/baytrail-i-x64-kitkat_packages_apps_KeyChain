@@ -28,11 +28,18 @@ import android.database.sqlite.SQLiteOpenHelper;
 import android.os.Binder;
 import android.os.IBinder;
 import android.os.Process;
+import android.os.UserHandle;
+
 import android.security.Credentials;
 import android.security.IKeyChainService;
 import android.security.KeyChain;
 import android.security.KeyStore;
 import android.util.Log;
+
+import com.intel.arkham.ContainerCommons;
+import com.intel.arkham.ParentKeyChain;
+import com.intel.config.FeatureConfig;
+
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.security.cert.CertificateException;
@@ -81,8 +88,10 @@ public class KeyChainService extends IntentService {
 
     private final IKeyChainService.Stub mIKeyChainService = new IKeyChainService.Stub() {
         private final KeyStore mKeyStore = KeyStore.getInstance();
-        private final TrustedCertificateStore mTrustedCertificateStore
-                = new TrustedCertificateStore();
+        // ARKHAM-624: Get user specific CA store
+        private final TrustedCertificateStore mTrustedCertificateStore =
+                (FeatureConfig.INTEL_FEATURE_ARKHAM
+                ? ParentKeyChain.getTrustedCertificateStore() : new TrustedCertificateStore());
 
         @Override
         public String requestPrivateKey(String alias) {
@@ -95,7 +104,18 @@ public class KeyChainService extends IntentService {
             }
 
             final StringBuilder sb = new StringBuilder();
-            sb.append(Process.SYSTEM_UID);
+            if (FeatureConfig.INTEL_FEATURE_ARKHAM) {
+                // ARKHAM-1087: Fix the hardcoded name for container keys
+                if (ContainerCommons.isContainer(UserHandle.getCallingUserId())) {
+                    sb.append(UserHandle.getUid(UserHandle.getCallingUserId(),
+                            UserHandle.getAppId(Process.SYSTEM_UID)));
+                }
+                else {
+                    sb.append(Process.SYSTEM_UID);
+                }
+            } else {
+                sb.append(Process.SYSTEM_UID);
+            }
             sb.append('_');
             sb.append(keystoreAlias);
 
